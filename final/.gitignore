@@ -1,0 +1,15 @@
+# Ignore .env file
+.env
+
+# Python bytecode files
+__pycache__/
+*.pyc
+
+# Flask instance folder
+instance/
+
+# Flask cache folder
+.flask_cache/
+
+# virtual environment folder
+venv/
