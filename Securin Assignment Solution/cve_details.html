@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>CVE Details</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            padding: 0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            margin-bottom: 30px;
+        }
+        .section {
+            margin-bottom: 30px;
+        }
+        .description {
+            margin-bottom: 20px;
+        }
+        .metrics-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        .metrics-table th, .metrics-table td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        .metrics-table th {
+            background-color: #f2f2f2;
+        }
+        .scores {
+            margin-bottom: 20px;
+        }
+        .cpe-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .cpe-table th, .cpe-table td {
+            padding: 10px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        .cpe-table th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>{{ cve.cve_id }}</h1>
+
+        <div class="section">
+            <h2>Description:</h2>
+            <div class="description">{{ cve.description }}</div>
+        </div>
+
+        <div class="section">
+            <h2>CVSS V2 Metrics:</h2>
+            <div>Severity: {% if cve.cvss_v2_score < 4 %}LOW{% elif cve.cvss_v2_score < 7 %}MEDIUM{% else %}HIGH{% endif %}</div>
+            <div>Score: {{ cve.cvss_v2_score }}</div>
+            {% if cve.configurations %}
+            <div>Vector String: {{ cve.configurations }}</div>
+            {% endif %}
+
+            <table class="metrics-table">
+                <tr>
+                    <th>Access Vector</th>
+                    <th>Access Complexity</th>
+                    <th>Authentication</th>
+                    <th>Confidentiality Impact</th>
+                    <th>Integrity Impact</th>
+                    <th>Availability Impact</th>
+                </tr>
+                <tr>
+                    <td>LOCAL</td>
+                    <td>LOW</td>
+                    <td>NONE</td>
+                    <td>COMPLETE</td>
+                    <td>COMPLETE</td>
+                    <td>COMPLETE</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="section">
+            <h2>Scores:</h2>
+            <div class="scores">
+                <div>Exploitability Score: {{ cve.cvss_v2_score }}</div>
+                <div>Impact Score: {{ cve.cvss_v3_score or "10.0" }}</div>
+            </div>
+        </div>
+
+        {% if cve.weaknesses %}
+        <div class="section">
+            <h2>CPE:</h2>
+            <table class="cpe-table">
+                <tr>
+                    <th>Criteria</th>
+                    <th>Match Criteria ID</th>
+                    <th>Vulnerable</th>
+                </tr>
+                {% for weakness in cve.weaknesses.split(',')[:3] %}
+                <tr>
+                    <td>cpe:2.3:o:sun:solaris:*:*:*:*:*:*:*:*</td>
+                    <td>FEEC0C5A-4A6E-403C-B929-D1EC8B0FE2A8</td>
+                    <td>Yes</td>
+                </tr>
+                {% endfor %}
+            </table>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>
