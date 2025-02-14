@@ -8,7 +8,7 @@ import time
 import os
 
 load_dotenv()
-app = Flask(_name_)
+app = Flask(__name__)
 
 
 
@@ -259,7 +259,7 @@ def get_cves_modified(days):
 
     return jsonify(cves)
 
-if _name_ == '_main_':
+if __name__ == '_main_':
     # Ensure the table is created on startup
     create_table()
     # Start the background CVE synchronization thread
