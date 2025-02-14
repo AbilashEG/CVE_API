@@ -176,6 +176,7 @@ def list_cves():
     # Validate sort_order and sort_direction to prevent SQL injection
     valid_sort_columns = ['cve_id', 'published_date', 'modified_date', 'status']
     valid_sort_directions = ['ASC', 'DESC']
+    
 
     if sort_order not in valid_sort_columns:
         sort_order = 'published_date'  # Default to published_date if invalid
