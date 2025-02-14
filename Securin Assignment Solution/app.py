@@ -2,26 +2,26 @@ import requests
 import mysql.connector
 from flask import Flask, jsonify, request, render_template, redirect, url_for
 from datetime import datetime, timedelta
+from dotenv import load_dotenv
 import threading
 import time
 import os
-from dotenv import load_dotenv
 
-app = Flask(__name__)
 load_dotenv()
+app = Flask(_name_)
 
-# MySQL connection
+
 
 def get_db_connection():
     return mysql.connector.connect(
-        host=os.getenv("DB_HOST"),
+       host=os.getenv("DB_HOST"),
         user=os.getenv("DB_USER"),
         password=os.getenv("DB_PASSWORD"),
         database=os.getenv("DB_NAME")
-    )
+    )    
 
 def fetch_cves(start_index=0, results_per_page=10, retries=5, delay=5):
-    base_url = "BASE_URL"
+    base_url = 'https://services.nvd.nist.gov/rest/json/cves/2.0'
     params = {
         'startIndex': start_index,
         'resultsPerPage': results_per_page
@@ -128,14 +128,12 @@ def clean_data(cve_item):
             return None
         descriptions = cve.get('descriptions', [{}])[0].get('value', 'No description available')
         
-    
-
         try:
             published_date = datetime.strptime(cve.get('published', '1970-01-01T00:00:00.000'), "%Y-%m-%dT%H:%M:%S.%f")
             modified_date = datetime.strptime(cve.get('lastModified', '1970-01-01T00:00:00.000'), "%Y-%m-%dT%H:%M:%S.%f")
         except ValueError:
-            return None    
-
+            return None
+        
         year = int(cve_id.split('-')[1]) if '-' in cve_id else 1970
         status = cve.get('vulnStatus', 'new')
         
@@ -261,7 +259,7 @@ def get_cves_modified(days):
 
     return jsonify(cves)
 
-if __name__ == '__main__':
+if _name_ == '_main_':
     # Ensure the table is created on startup
     create_table()
     # Start the background CVE synchronization thread

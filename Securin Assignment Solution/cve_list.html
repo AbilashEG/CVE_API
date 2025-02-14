@@ -49,7 +49,7 @@
         }
 
         .table th {
-            background-color: #736fdb;
+            background-color: #007bff;
             color: white;
             cursor: pointer;
         }
@@ -64,12 +64,12 @@
         }
 
         .pagination .page-item.active .page-link {
-            background-color: #96a2d7;
+            background-color: #0056b3;
             color: white;
         }
 
         .pagination .page-link:hover {
-            background-color: #b4aed8;
+            background-color: #0056b3;
             color: white;
         }
 
@@ -84,13 +84,13 @@
 
         .btn-info {
             color: #fff;
-            background-color: #b4aed8;
-            border-color: #b4aed8;
+            background-color: #17a2b8;
+            border-color: #17a2b8;
         }
 
         .btn-info:hover {
-            background-color: #b4aed8;
-            border-color: #b4aed8;
+            background-color: #138496;
+            border-color: #117a8b;
         }
 
         /* Responsive Design */
@@ -113,15 +113,15 @@
         <!-- Filtering Form -->
         <div class="filter-container d-flex justify-content-between">
             <div>
-                <label for="filterCveId">Filter by CVE ID</label>
+                <label for="filterCveId">Filter by CVE ID:</label>
                 <input type="text" id="filterCveId" class="form-control" placeholder="Enter CVE ID" onkeyup="filterTable()">
             </div>
             <div>
-                <label for="filterCvssScore">Filter by CVSS Score</label>
+                <label for="filterCvssScore">Filter by CVSS Score (>=):</label>
                 <input type="number" id="filterCvssScore" class="form-control" placeholder="Enter minimum score" onkeyup="filterTable()">
             </div>
             <div>
-                <label for="filterDateModified">Filter by Date Modified</label>
+                <label for="filterDateModified">Filter by Date Modified (>=):</label>
                 <input type="date" id="filterDateModified" class="form-control" onchange="filterTable()">
             </div>
         </div>
@@ -192,28 +192,46 @@
                         <a class="page-link" href="{{ url_for('list_cves', page=page-1, resultsPerPage=results_per_page, sort=sort_order, direction=sort_direction) }}">Previous</a>
                     </li>
                 {% endif %}
-
-                <!-- Page 1 to 5 -->
-                {% for i in range(1, 6) %}
-                    {% if page == i %}
-                        <li class="page-item active">
-                            <a class="page-link" href="{{ url_for('list_cves', page=i, resultsPerPage=results_per_page, sort=sort_order, direction=sort_direction) }}">{{ i }}</a>
-                        </li>
-                    {% elif i <= total_records // results_per_page + 1 %}
-                        <li class="page-item">
-                            <a class="page-link" href="{{ url_for('list_cves', page=i, resultsPerPage=results_per_page, sort=sort_order, direction=sort_direction) }}">{{ i }}</a>
-                        </li>
+        
+                <!-- Page Numbers -->
+                {% set total_pages = (total_records // results_per_page) + (1 if total_records % results_per_page > 0 else 0) %}
+                
+                {% set start_page = page - 2 if page > 3 else 1 %}
+                {% set end_page = page + 2 if page + 2 <= total_pages else total_pages %}
+                
+                {% if start_page > 1 %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('list_cves', page=1, resultsPerPage=results_per_page, sort=sort_order, direction=sort_direction) }}">1</a>
+                    </li>
+                    {% if start_page > 2 %}
+                        <li class="page-item disabled"><a class="page-link">...</a></li>
                     {% endif %}
+                {% endif %}
+        
+                {% for i in range(start_page, end_page + 1) %}
+                    <li class="page-item {% if page == i %}active{% endif %}">
+                        <a class="page-link" href="{{ url_for('list_cves', page=i, resultsPerPage=results_per_page, sort=sort_order, direction=sort_direction) }}">{{ i }}</a>
+                    </li>
                 {% endfor %}
-
+        
+                {% if end_page < total_pages %}
+                    {% if end_page < total_pages - 1 %}
+                        <li class="page-item disabled"><a class="page-link">...</a></li>
+                    {% endif %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('list_cves', page=total_pages, resultsPerPage=results_per_page, sort=sort_order, direction=sort_direction) }}">{{ total_pages }}</a>
+                    </li>
+                {% endif %}
+        
                 <!-- Next Page -->
-                {% if page * results_per_page < total_records %}
+                {% if page < total_pages %}
                     <li class="page-item">
                         <a class="page-link" href="{{ url_for('list_cves', page=page+1, resultsPerPage=results_per_page, sort=sort_order, direction=sort_direction) }}">Next</a>
                     </li>
                 {% endif %}
             </ul>
         </nav>
+        
     </div>
 
     <script>
@@ -256,7 +274,7 @@
         // Function to update results per page and reload page
         function changeResultsPerPage() {
             const resultsPerPage = document.getElementById("resultsPerPage").value;
-            window.location.href = `?page=1&resultsPerPage=${resultsPerPage}&sort={{ sort_order }}&direction={{ sort_direction }}`;
+            window.location.href = ?page=1&resultsPerPage=${resultsPerPage}&sort={{ sort_order }}&direction={{ sort_direction }};
         }
     </script>
 </body>
