@@ -110,21 +110,7 @@
     <div class="container mt-5">
         <h1>CVE List</h1>
 
-        <!-- Filtering Form -->
-        <div class="filter-container d-flex justify-content-between">
-            <div>
-                <label for="filterCveId">Filter by CVE ID:</label>
-                <input type="text" id="filterCveId" class="form-control" placeholder="Enter CVE ID" onkeyup="filterTable()">
-            </div>
-            <div>
-                <label for="filterCvssScore">Filter by CVSS Score (>=):</label>
-                <input type="number" id="filterCvssScore" class="form-control" placeholder="Enter minimum score" onkeyup="filterTable()">
-            </div>
-            <div>
-                <label for="filterDateModified">Filter by Date Modified (>=):</label>
-                <input type="date" id="filterDateModified" class="form-control" onchange="filterTable()">
-            </div>
-        </div>
+        
 
         <div class="d-flex justify-content-between mb-3">
             <!-- Results per page dropdown -->
@@ -140,7 +126,37 @@
             <!-- Total records count -->
             <div>Total Records: {{ total_records }}</div>
         </div>
-
+        <form id="filter-form" class="mb-4 p-4 border rounded bg-white shadow-sm">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label for="search" class="form-label fw-bold">Search CVE ID or Description</label>
+                    <input type="text" id="search" name="search" class="form-control" placeholder="Search..." value="{{ search_query }}">
+                </div>
+                <div class="col-md-2">
+                    <label for="min_score" class="form-label fw-bold">Min CVSS Score</label>
+                    <input type="number" id="min_score" name="min_score" class="form-control" placeholder="0" value="{{ min_score }}" min="0" max="10">
+                </div>
+                <div class="col-md-2">
+                    <label for="max_score" class="form-label fw-bold">Max CVSS Score</label>
+                    <input type="number" id="max_score" name="max_score" class="form-control" placeholder="10" value="{{ max_score }}" min="0" max="10">
+                </div>
+                <div class="col-md-2">
+                    <label for="start_date" class="form-label fw-bold">Start Date</label>
+                    <input type="date" id="start_date" name="start_date" class="form-control" value="{{ start_date }}">
+                </div>
+                <div class="col-md-2">
+                    <label for="end_date" class="form-label fw-bold">End Date</label>
+                    <input type="date" id="end_date" name="end_date" class="form-control" value="{{ end_date }}">
+                </div>
+                <div class="col-12 text-end">
+                    <button type="submit" class="btn btn-primary">Filter</button>
+                    <button type="reset" class="btn btn-secondary">Reset</button>
+                </div>
+            </div>
+        </form>
+        
+        
+        
         <table class="table table-bordered" id="cveTable">
             <thead>
                 <tr>
@@ -182,6 +198,9 @@
                 {% endfor %}
             </tbody>
         </table>
+
+        
+
 
         <!-- Pagination Navigation Bar -->
         <nav aria-label="Page navigation">

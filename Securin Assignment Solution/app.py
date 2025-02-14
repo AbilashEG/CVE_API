@@ -168,6 +168,7 @@ def home():
 @app.route('/cves/list', methods=['GET'])
 def list_cves():
     # Pagination and Results per Page handling
+    print(request.args)
     page = int(request.args.get('page', 1))
     results_per_page = int(request.args.get('resultsPerPage', 10))  # Default to 10 results per page
     sort_order = request.args.get('sort', 'published_date')  # Default to sorting by published_date
@@ -185,16 +186,51 @@ def list_cves():
 
     start_index = (page - 1) * results_per_page
 
+
+
+    # Query condition
+    query_conditions = []
+
+    search = request.args.get("search", "").strip()
+    if search:
+        query_conditions.append(f'(cve_id LIKE "%{search}%" OR description LIKE "%{search}%")')
+
+    min_cvss = request.args.get("min_score", "").strip()
+    max_cvss = request.args.get("max_score", "").strip()
+    if min_cvss and max_cvss:
+        query_conditions.append(f'cvss_score BETWEEN {min_cvss} AND {max_cvss}')
+    elif min_cvss:
+        query_conditions.append(f'cvss_score = {min_cvss}')
+    elif max_cvss:
+        query_conditions.append(f'cvss_score = {max_cvss}')
+
+    start_date = request.args.get("start_date", "").strip()
+    end_date = request.args.get("end_date", "").strip()
+    if start_date and end_date:
+        query_conditions.append(f'published_date BETWEEN "{start_date}" AND "{end_date}"')
+    elif start_date:
+        query_conditions.append(f'published_date = "{start_date}"')
+    elif end_date:
+        query_conditions.append(f'published_date = "{end_date}"')
+
+    query_condition_string = " AND ".join(query_conditions) if query_conditions else ""
+
+    if query_condition_string != "":
+        query_condition_string = " where "+query_condition_string
+    print(query_condition_string)
+
+
+
     # Query to get total records count
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT COUNT(*) FROM cve_details")
+    cursor.execute(f"""SELECT COUNT(*) FROM cve_details {query_condition_string}""")
     total_records = cursor.fetchone()['COUNT(*)']
 
     # Query to fetch CVEs with pagination and sorting
     cursor.execute(f"""
     SELECT cve_id, description, published_date, modified_date, cvss_v2_score, status, year
-    FROM cve_details
+    FROM cve_details {query_condition_string}
     ORDER BY {sort_order} {sort_direction}
     LIMIT {results_per_page} OFFSET {start_index}
     """)
@@ -209,6 +245,9 @@ def list_cves():
                            total_records=total_records, 
                            sort_order=sort_order, 
                            sort_direction=sort_direction)
+
+
+
 @app.route('/cves/<cve_id>', methods=['GET'])
 def get_cve_by_id(cve_id):
     conn = get_db_connection()
@@ -265,4 +304,4 @@ if __name__ == '__main__':
     create_table()
     # Start the background CVE synchronization thread
     start_sync_thread()
-    app.run(debug=True)
+    app.run(debug=True) 
