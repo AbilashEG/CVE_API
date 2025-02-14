@@ -274,7 +274,7 @@
         // Function to update results per page and reload page
         function changeResultsPerPage() {
             const resultsPerPage = document.getElementById("resultsPerPage").value;
-            window.location.href = ?page=1&resultsPerPage=${resultsPerPage}&sort={{ sort_order }}&direction={{ sort_direction }};
+            window.location.href = `?page=1&resultsPerPage=${resultsPerPage}&sort={{ sort_order }}&direction={{ sort_direction }}`;
         }
     </script>
 </body>

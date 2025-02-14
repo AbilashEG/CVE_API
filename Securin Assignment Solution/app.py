@@ -259,7 +259,7 @@ def get_cves_modified(days):
 
     return jsonify(cves)
 
-if __name__ == '_main_':
+if __name__ == '__main__':
     # Ensure the table is created on startup
     create_table()
     # Start the background CVE synchronization thread
