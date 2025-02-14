@@ -10,15 +10,13 @@ import os
 load_dotenv()
 app = Flask(__name__)
 
-
-
 def get_db_connection():
     return mysql.connector.connect(
-       host=os.getenv("DB_HOST"),
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASSWORD"),
-        database=os.getenv("DB_NAME")
-    )    
+        host='localhost',
+        user='root',
+        password='Abilash@2003',
+        database='coredata'
+    )
 
 def fetch_cves(start_index=0, results_per_page=10, retries=5, delay=5):
     base_url = 'https://services.nvd.nist.gov/rest/json/cves/2.0'
@@ -26,7 +24,7 @@ def fetch_cves(start_index=0, results_per_page=10, retries=5, delay=5):
         'startIndex': start_index,
         'resultsPerPage': results_per_page
     }
-    
+
     for attempt in range(retries):
         try:
             response = requests.get(base_url, params=params)
@@ -39,10 +37,10 @@ def fetch_cves(start_index=0, results_per_page=10, retries=5, delay=5):
                 return {}
         except requests.exceptions.RequestException as e:
             print(f"Error fetching CVEs: {e}")
-        
+
         print(f"Retrying in {delay} seconds...")
         time.sleep(delay)
-    
+
     print("Failed to fetch CVEs after multiple attempts.")
     return {}
 
@@ -94,23 +92,22 @@ def create_table():
     cursor.close()
     conn.close()
 
-
 def store_cve(cve_data):
     conn = get_db_connection()
     cursor = conn.cursor()
-    
+
     insert_query = '''
     INSERT INTO cve_details (
         cve_id, description, published_date, modified_date, cvss_score, cvss_v2_score, cvss_v3_score,
         weaknesses, configurations, reference_links, year, status
     ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-    ON DUPLICATE KEY UPDATE 
+    ON DUPLICATE KEY UPDATE
         description=VALUES(description), modified_date=VALUES(modified_date),
         cvss_score=VALUES(cvss_score), cvss_v2_score=VALUES(cvss_v2_score), cvss_v3_score=VALUES(cvss_v3_score),
-        weaknesses=VALUES(weaknesses), configurations=VALUES(configurations), reference_links=VALUES(reference_links), 
+        weaknesses=VALUES(weaknesses), configurations=VALUES(configurations), reference_links=VALUES(reference_links),
         status=VALUES(status);
     '''
-    
+
     try:
         cursor.execute(insert_query, tuple(cve_data.values()))
         conn.commit()
@@ -127,24 +124,24 @@ def clean_data(cve_item):
         if not cve_id:
             return None
         descriptions = cve.get('descriptions', [{}])[0].get('value', 'No description available')
-        
+
         try:
             published_date = datetime.strptime(cve.get('published', '1970-01-01T00:00:00.000'), "%Y-%m-%dT%H:%M:%S.%f")
             modified_date = datetime.strptime(cve.get('lastModified', '1970-01-01T00:00:00.000'), "%Y-%m-%dT%H:%M:%S.%f")
         except ValueError:
             return None
-        
+
         year = int(cve_id.split('-')[1]) if '-' in cve_id else 1970
         status = cve.get('vulnStatus', 'new')
-        
+
         metrics = cve.get('metrics', {}).get('cvssMetricV2', [{}])[0].get('cvssData', {})
         cvss_v2_score = metrics.get('baseScore')
         cvss_v3_score = cve.get('metrics', {}).get('cvssMetricV3', [{}])[0].get('cvssData', {}).get('baseScore')
-        
+
         weaknesses = ', '.join([w.get('description', [{}])[0].get('value', 'Unknown') for w in cve.get('weaknesses', [])])
         configurations = ', '.join([c.get('nodes', [{}])[0].get('operator', 'Unknown') for c in cve.get('configurations', [])])
         references = ', '.join([r.get('url', '') for r in cve.get('references', [])])
-        
+
         return {
             "cve_id": cve_id, "description": descriptions, "published_date": published_date, "modified_date": modified_date,
             "cvss_score": cvss_v2_score or cvss_v3_score, "cvss_v2_score": cvss_v2_score, "cvss_v3_score": cvss_v3_score,
@@ -168,7 +165,6 @@ def home():
 @app.route('/cves/list', methods=['GET'])
 def list_cves():
     # Pagination and Results per Page handling
-    print(request.args)
     page = int(request.args.get('page', 1))
     results_per_page = int(request.args.get('resultsPerPage', 10))  # Default to 10 results per page
     sort_order = request.args.get('sort', 'published_date')  # Default to sorting by published_date
@@ -177,7 +173,6 @@ def list_cves():
     # Validate sort_order and sort_direction to prevent SQL injection
     valid_sort_columns = ['cve_id', 'published_date', 'modified_date', 'status']
     valid_sort_directions = ['ASC', 'DESC']
-    
 
     if sort_order not in valid_sort_columns:
         sort_order = 'published_date'  # Default to published_date if invalid
@@ -186,67 +181,69 @@ def list_cves():
 
     start_index = (page - 1) * results_per_page
 
+    # Get filter parameters from the request
+    cve_id_filter = request.args.get('cve_id', None)
+    cvss_score_filter = request.args.get('cvss_score', None)
+    modified_date_filter = request.args.get('modified_date', None)
 
+    # Build the WHERE clause dynamically
+    where_clauses = []
+    params = {}
 
-    # Query condition
-    query_conditions = []
+    if cve_id_filter and cve_id_filter.lower() != 'none':  # Check if cve_id_filter is not None or "None"
+        where_clauses.append("cve_id = %(cve_id)s")
+        params['cve_id'] = cve_id_filter
 
-    search = request.args.get("search", "").strip()
-    if search:
-        query_conditions.append(f'(cve_id LIKE "%{search}%" OR description LIKE "%{search}%")')
+    if cvss_score_filter and cvss_score_filter.lower() != 'none':  # Check if cvss_score_filter is not None or "None"
+        where_clauses.append("cvss_score >= %(cvss_score)s")
+        try:
+            params['cvss_score'] = float(cvss_score_filter)
+        except ValueError:
+            # Handle invalid CVSS score input (e.g., log an error, display a message to the user)
+            params['cvss_score'] = 0.0  # Default value
 
-    min_cvss = request.args.get("min_score", "").strip()
-    max_cvss = request.args.get("max_score", "").strip()
-    if min_cvss and max_cvss:
-        query_conditions.append(f'cvss_score BETWEEN {min_cvss} AND {max_cvss}')
-    elif min_cvss:
-        query_conditions.append(f'cvss_score = {min_cvss}')
-    elif max_cvss:
-        query_conditions.append(f'cvss_score = {max_cvss}')
+    if modified_date_filter and modified_date_filter.lower() != 'none':  # Check if modified_date_filter is not None or "None"
+        where_clauses.append("modified_date >= %(modified_date)s")
+        try:
+            params['modified_date'] = datetime.strptime(modified_date_filter, '%Y-%m-%d')  # Use the correct format
+        except ValueError:
+            # Handle invalid date input
+            params['modified_date'] = datetime.min  # Default to the earliest date
 
-    start_date = request.args.get("start_date", "").strip()
-    end_date = request.args.get("end_date", "").strip()
-    if start_date and end_date:
-        query_conditions.append(f'published_date BETWEEN "{start_date}" AND "{end_date}"')
-    elif start_date:
-        query_conditions.append(f'published_date = "{start_date}"')
-    elif end_date:
-        query_conditions.append(f'published_date = "{end_date}"')
+    where_clause = ""
+    if where_clauses:
+        where_clause = "WHERE " + " AND ".join(where_clauses)
 
-    query_condition_string = " AND ".join(query_conditions) if query_conditions else ""
-
-    if query_condition_string != "":
-        query_condition_string = " where "+query_condition_string
-    print(query_condition_string)
-
-
-
-    # Query to get total records count
+    # Query to get total records count with filtering
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute(f"""SELECT COUNT(*) FROM cve_details {query_condition_string}""")
+    count_query = f"SELECT COUNT(*) FROM cve_details {where_clause}"
+    cursor.execute(count_query, params)
     total_records = cursor.fetchone()['COUNT(*)']
 
-    # Query to fetch CVEs with pagination and sorting
-    cursor.execute(f"""
-    SELECT cve_id, description, published_date, modified_date, cvss_v2_score, status, year
-    FROM cve_details {query_condition_string}
-    ORDER BY {sort_order} {sort_direction}
-    LIMIT {results_per_page} OFFSET {start_index}
-    """)
+    # Query to fetch CVEs with pagination, sorting, and filtering
+    select_query = f"""
+        SELECT cve_id, description, published_date, modified_date, cvss_v2_score, status, year
+        FROM cve_details
+        {where_clause}
+        ORDER BY {sort_order} {sort_direction}
+        LIMIT {results_per_page} OFFSET {start_index}
+    """
+    cursor.execute(select_query, params)
     cves = cursor.fetchall()
     cursor.close()
     conn.close()
 
-    return render_template('cve_list.html', 
-                           cves=cves, 
-                           page=page, 
-                           results_per_page=results_per_page, 
-                           total_records=total_records, 
-                           sort_order=sort_order, 
-                           sort_direction=sort_direction)
-
-
+    return render_template('cve_list.html',
+                           cves=cves,
+                           page=page,
+                           results_per_page=results_per_page,
+                           total_records=total_records,
+                           sort_order=sort_order,
+                           sort_direction=sort_direction,
+                           cve_id_filter=cve_id_filter,
+                           cvss_score_filter=cvss_score_filter,
+                           modified_date_filter=modified_date_filter)
 
 @app.route('/cves/<cve_id>', methods=['GET'])
 def get_cve_by_id(cve_id):
@@ -304,4 +301,4 @@ if __name__ == '__main__':
     create_table()
     # Start the background CVE synchronization thread
     start_sync_thread()
-    app.run(debug=True) 
+    app.run(debug=True)
