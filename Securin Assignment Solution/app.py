@@ -12,10 +12,10 @@ app = Flask(__name__)
 
 def get_db_connection():
     return mysql.connector.connect(
-        host='localhost',
-        user='root',
-        password='Abilash@2003',
-        database='coredata'
+        host=os.getenv('DB_HOST'),
+        user=os.getenv('DB_USER'),
+        password=os.getenv('DB_PASSWORD'),
+        database=os.getenv('DB_NAME')
     )
 
 def fetch_cves(start_index=0, results_per_page=10, retries=5, delay=5):
@@ -25,7 +25,7 @@ def fetch_cves(start_index=0, results_per_page=10, retries=5, delay=5):
         'resultsPerPage': results_per_page
     }
 
-    for attempt in range(retries):
+    for attempt in range(retries): #intiated the for loop for  retry 
         try:
             response = requests.get(base_url, params=params)
             if response.status_code == 200:
@@ -45,7 +45,7 @@ def fetch_cves(start_index=0, results_per_page=10, retries=5, delay=5):
     return {}
 
 
-# Update the sync_cves function to handle the structure of the response
+# Update the sync_cves function to handle the structure of the response it syncs with database 
 def sync_cves():
     start_index = 0
     results_per_page = 10
@@ -69,7 +69,7 @@ def sync_cves():
         start_index += results_per_page
         time.sleep(10)  # Sleep for a while before the next fetch cycle
 
-def create_table():
+def create_table(): #table structure 
     conn = get_db_connection()
     cursor = conn.cursor()
     cursor.execute('''
@@ -92,7 +92,7 @@ def create_table():
     cursor.close()
     conn.close()
 
-def store_cve(cve_data):
+def store_cve(cve_data):# insert query 
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -101,14 +101,14 @@ def store_cve(cve_data):
         cve_id, description, published_date, modified_date, cvss_score, cvss_v2_score, cvss_v3_score,
         weaknesses, configurations, reference_links, year, status
     ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-    ON DUPLICATE KEY UPDATE
+    ON DUPLICATE KEY UPDATE  
         description=VALUES(description), modified_date=VALUES(modified_date),
         cvss_score=VALUES(cvss_score), cvss_v2_score=VALUES(cvss_v2_score), cvss_v3_score=VALUES(cvss_v3_score),
         weaknesses=VALUES(weaknesses), configurations=VALUES(configurations), reference_links=VALUES(reference_links),
         status=VALUES(status);
     '''
 
-    try:
+    try: # intiated try except method to catch errors 
         cursor.execute(insert_query, tuple(cve_data.values()))
         conn.commit()
     except mysql.connector.Error as err:
@@ -117,7 +117,7 @@ def store_cve(cve_data):
         cursor.close()
         conn.close()
 
-def clean_data(cve_item):
+def clean_data(cve_item): #cleaning 
     try:
         cve = cve_item.get('cve', {})
         cve_id = cve.get('id')
